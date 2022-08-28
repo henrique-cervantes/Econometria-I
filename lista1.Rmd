@@ -1,0 +1,54 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+QUESTÃO 11
+```{r}
+
+# Carregando o pacote
+library(wooldridge)
+
+library(tidyverse)
+
+# Carregando os dados
+dados <- wage1
+
+
+# Nível médio de educação na amostra:
+mean(dados$educ)
+
+# Ano mais baixo de educação:
+min(dados$educ)
+
+# Ano mais alto de educação:
+max(dados$educ)
+
+
+# Número de pessoas com o número mais baixo de educação (0):
+dados %>% 
+  filter(educ == min(educ)) %>% 
+  count() %>% 
+  pull()
+
+# Número de pessoas com o número mais alto de educação (18):
+dados %>% 
+  filter(educ == max(educ)) %>% 
+  count() %>% 
+  pull()
+
+
+
+# b) - Salário médio por hora:
+mean(dados$wage)
+
+
+# c) - Número de homens e mulheres na amostra:
+dados %>% 
+  mutate(genero = if_else(female == 1, 'Mulher', 'Homem')) %>% 
+  count(genero) %>% 
+  rename(Gênero = genero, Número = n)
+
+
+```
+
