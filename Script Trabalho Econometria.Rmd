@@ -37,6 +37,7 @@ direto do site do IBGE - demora alguns minutos (\~5 min)
 library(PNADcIBGE)
 library(tidyverse)
 library(readxl)
+library(skimr)
 ```
 
 ## Download da base de dados
@@ -157,16 +158,23 @@ var_rls <- pnadc %>%
     S01029 == "Sim" ~ 1,
     S01029 == "Não" ~ 0
   ))  # Adaptando as variáveis categóricas para realizar a regressão linear
+
+
+skim(var_rls)
+
+summary(glm(VD4002 ~ S01029, data = var_rls, family = "binomial"))
 ```
 
 ### RLS geral: $$Ocupação$$ \~ $$Internet$$
 
 ```{r}
 # Rodando a regressão! :)
-summary(lm(VD4002 ~ S01029, var_rls))
+rls <- lm(as.factor(VD4002) ~ as.factor(S01029), var_rls)
+summary(rls)
+plot(rls)
 ```
 
-### RLS Homens: $$Ocupação_{homens}$$ \~ $$Internet_{homens}$$
+### RLS Homens: $$Ocupação_{homens}$$\~ $$Internet_{homens}$$
 
 ```{r}
 # Selecionando a variável para homens
@@ -188,10 +196,29 @@ summary(lm(VD4002 ~ S01029, var_rlsm))
 
 ## Agora, vamos passar para as regressões lineares múltiplas
 
+Vamos selecionar as seguintes variáveis:
+
+-   **Características individuais:** Sexo (V2007), Idade (V2009),
+    Cor/Raça (V2010), Região do país, Nível de instrução mais elevado
+    (VD3004)
+
 ```{r}
 
+var_rlm <- pnadc %>% 
+  filter(V2009 > 17 & V2009 < 66) %>%  # Aplicando o filtro de idade 18-65 anos
+  select(VD4002, S01029, V2007, V2009, V2010, UF, VD3004)
+var_rlm$VD4002 <- factor(var_rlm$VD4002, levels = c("Pessoas ocupadas", "Pessoas desocupadas"))
+var_rlm$S01029 <- factor(var_rlm$S01029, levels = c("Sim", "Não"))
+var_rlm$V2007 <- factor(var_rlm$V2007, levels = c("Mulher", "Homem"))
+var_rlm$V2010 <- factor(var_rlm$V2010, levels = c("Branca", "Preta", "Parda", "Amarela", "Indígena", "Ignorada"))
+var_rlm$VD3004 <- factor(var_rlm$VD4002, levels = c("Sem instrução e menos de 1 ano de estudo", "Fundamental incompleto ou equivalente", "Fundamental completo ou equivalente", "Médio incompleto ou equivalente", "Médio completo ou equivalente", "Superior incompleto ou equivalente", "Superior completo"))
 
+var_rlm %>% 
+  count(VD3004)
 
+str(var_rlm)
+
+summary(glm(VD4002 ~ S01029 + V2007 + V2010 + VD3004, data = var_rlm, family = "binomial"))
 
 ```
 
