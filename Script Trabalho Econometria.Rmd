@@ -38,6 +38,7 @@ library(PNADcIBGE)
 library(tidyverse)
 library(readxl)
 library(skimr)
+library(stargazer)
 ```
 
 ## Download da base de dados
@@ -159,8 +160,11 @@ var_rls <- pnadc %>%
     S01029 == "Não" ~ 0
   ))  # Adaptando as variáveis categóricas para realizar a regressão linear
 
+view(var_rls)
 
 skim(var_rls)
+
+summary(ls(VD4002 ~ S01029, var_rls))
 
 summary(glm(VD4002 ~ S01029, data = var_rls, family = "binomial"))
 ```
@@ -168,9 +172,14 @@ summary(glm(VD4002 ~ S01029, data = var_rls, family = "binomial"))
 ### RLS geral: $$Ocupação$$ \~ $$Internet$$
 
 ```{r}
+var_rls_sna <- var_rls %>% 
+  drop_na()
+cov(var_rls_sna$VD4002, var_rls_sna$S01029)
+
 # Rodando a regressão! :)
-rls <- lm(as.factor(VD4002) ~ as.factor(S01029), var_rls)
+rls <- lm(VD4002 ~ S01029, var_rls)
 summary(rls)
+stargazer(rls)
 plot(rls)
 ```
 
@@ -181,6 +190,12 @@ plot(rls)
 var_rlsh <- var_rls %>% 
   filter(V2007 == "Homem")
 
+# Covariância para homens
+var_rlsh_sna <- var_rlsh %>% 
+  drop_na()
+cov(var_rlsh_sna$VD4002, var_rlsh_sna$S01029)
+
+# Rodando a regressão
 summary(lm(VD4002 ~ S01029, var_rlsh))
 ```
 
@@ -190,6 +205,11 @@ summary(lm(VD4002 ~ S01029, var_rlsh))
 # Selecionando a variável para homens
 var_rlsm <- var_rls %>% 
   filter(V2007 == "Mulher")
+
+# Covariância para mulheres
+var_rlsm_sna <- var_rlsm %>% 
+  drop_na()
+cov(var_rlsm_sna$VD4002, var_rlsm_sna$S01029)
 
 summary(lm(VD4002 ~ S01029, var_rlsm))
 ```
