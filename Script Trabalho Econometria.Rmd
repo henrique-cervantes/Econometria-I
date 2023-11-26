@@ -14,19 +14,6 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Leitura dos dados da PNADC Visita 1 - Ano XXXX
-
-```{r}
-rm(list = ls())
-```
-
-Selecione o diretorio do seu trabalho
-
-```{r}
-# setwd("Colocar o seu diretório aqui - barras invertidas") 
-# getwd()
-```
-
 ### Pacotes
 
 Usando o pacote PNADcIBGE é possivel fazer o download da base de dados
@@ -45,9 +32,7 @@ library(ggpubr)
 
 ## Download da base de dados
 
-Criamos um vetor com as variaveis que queremos trazer da PNADC -
-visita1, porque a base completa tem muitas variaveis que não fazem
-sentido para as analises propostas
+Vetor de variáveis para selecionar dados específicos da PNADC
 
 ```{r}
 variables <- c("Ano" , "Trimestre", "UF","V1022", "V1023", "V1032","V2007", "V2008", "V20081", "V20082", "V2009", "V2010", "V3001", "V3002", "V4009", "V4018", "V40181", "V40182", "V40183", "V4029", "V4032", "V4040", "V40401", "V40402", "V40403", "V4071", "V5001A", "V5001A2","V5002A","V5002A2","V5003A","V5003A2", "V5004A","V5004A2", "V5005A", "V5005A2","V5006A","V5006A2","V5007A","V5007A2","V5008A", 
@@ -57,26 +42,24 @@ variables <- c("Ano" , "Trimestre", "UF","V1022", "V1023", "V1032","V2007", "V20
 Onde esta XXXX no comando abaixo colocar o ano
 
 ```{r}
-pnadcvis1 <- get_pnadc(2022, interview = 1, deflator = TRUE, labels = TRUE, vars=variables, design=FALSE)
+# pnadcvis1 <- get_pnadc(2022, interview = 1, deflator = TRUE, labels = TRUE, vars=variables, design=FALSE)
 ```
 
-Mesmo escolhendo as variaveis, o pacote traz algumas que nao iremos usar
-
-entao fazemos uma selecao para obter uma base com 67 variaveis
+Mesmo escolhendo as variaveis, o pacote traz algumas que nao iremos
+usar, então fazemos uma selecao para obter uma base com 67 variáveis
 
 ```{r}
-pnadc <- pnadcvis1 %>% select(all_of(variables))
-
-rm(pnadcvis1) # remove o objeto anterior
+# pnadc <- pnadcvis1 %>% select(all_of(variables))
+# rm(pnadcvis1) # remove o objeto anterior
 ```
 
-Essa e' a base que voce deve utilizar no seu trabalho
+Essa é a base que voce deve utilizar no seu trabalho
 
 Salvar, ler e detalhes da base
 
 ```{r}
-save(pnadc,file = "base.RData") 
-rm(list = ls())
+# save(pnadc,file = "base.RData") 
+# rm(list = ls())
 ```
 
 # Acessando a base que foi salva
@@ -146,187 +129,9 @@ dict %>%
 Portanto, as variáveis explicativa e explicada de interesse são,
 respectivamente, **S01029** e **VD4002**
 
-regressão linear, é válido observar a quantidade de NAs (dados
-faltantes) para cada uma dessas variáveis:
-
-```{r}
-
-# Para toda a base de dados:
-
-
-
-```
-
-## Regressão linear simples: 
-
-1) Preparação dos dados
-
-```{r}
-# Construindo uma nova base de dados com as variáveis de interesse para as análises de regressão linear simples
-class(pnadc$VD4002)
-
-df_rls <- pnadc %>% 
-  filter(V2009 > 17 & V2009 < 66) %>%  # Aplicando o filtro de idade 18-65 anos
-  select(V2007, VD4002, S01029) %>%  # Selecionando as variáveis sexo, ocupação e internet em casa
-  mutate(Ocupação = case_when(
-    VD4002 == "Pessoas ocupadas" ~ 1,
-    VD4002 == "Pessoas desocupadas" ~ 0
-  )) %>%
-  mutate(`Internet no domicílio` = case_when(
-    S01029 == "Sim" ~ 1,
-    S01029 == "Não" ~ 0
-  )) %>% # Tranformando as variáveis binárias em numéricas para executar a regressão linear
-  mutate(Sexo = V2007) %>%
-  relocate(Sexo, .before = Ocupação) %>% 
-  select(-V2007)
-```
-
-2) Visualizando a quantidade de NAs por variável:
-
-```{r}
-Geral
-Visualização da quantidade de NAs
-df_rls %>% %>% %>% %>%
-```
-
-3) Tratamento dos NAs da base de dados:
-
--   Considerando que o número de NAs da coluna Ocupação corresponde
-    exatamente ao número de pessoas fora da força de trabalho (de acordo
-    com a variável VD4001 - Condição em relação à força de trabalho),
-    pode ser razoável considerar essas pessoas como desocupadas
-
-```{r}
-# Salvando o df_rls original em outra variável 
-df_rls_orig <- df_rls
-
-# Tratando os NAs na base df_rls
-df_rls <- df_rls %>% 
-  mutate(Ocupação = if_else(is.na(Ocupação), 0, Ocupação))
-```
-
-4) Visualização das proporções das variáveis anteriores:
-
-```{r}
-# Para o total da amostra
-prop_ocupacao_tot <- df_rls %>%
-  mutate(Total = if_else(Sexo == "Homem", '', '')) %>% 
-  ggplot(aes(x = Total, fill = VD4002)) +
-  theme_classic() +
-  geom_bar(position = 'fill') +
-  labs(y = 'Proporção', title = 'Proporção de pessoas ocupadas na amostra') 
-
-prop_internet_tot <- df_rls %>%
-  mutate(Total = if_else(Sexo == "Homem", '', '')) %>% 
-  ggplot(aes(x = Total, fill = S01029)) +
-  theme_classic() +
-  geom_bar(position = 'fill') +
-  labs(y = 'Proporção', title = 'Proporção de pessoas com internet em casa na amostra') 
-
-# Plotando os dois gráficos simultaneamente:
-ggarrange(prop_ocupacao_tot, prop_internet_tot)
-
-# Por sexo
-prop_ocupacao_sex <- df_rls %>%
-  ggplot(aes(x = Sexo, fill = VD4002)) +
-  theme_classic() +
-  geom_bar(position = 'fill') +
-  labs(y = 'Proporção', x = 'Gênero', title = 'Proporção de pessoas ocupadas por sexo')
-
-prop_internet_sex <- df_rls %>%
-  ggplot(aes(x = Sexo, fill = S01029)) +
-  theme_classic() +
-  geom_bar(position = 'fill') +
-  labs(y = 'Proporção', x = 'Gênero', title = 'Proporção de pessoas com internet em casa por sexo')
-
-# Plotando os dois gráficos simultaneamente:
-ggarrange(prop_ocupacao_sex, prop_internet_sex)
-```
-
-### Modelo geral da regressão linear simples:  
-
-### OCUPAÇÃO = beta_0 + beta_1\*Internet + u
-
-```{r}
-# Aferindo a covariância entre as variáveis 
-cov(df_rls$Ocupação, df_rls$`Internet no domicílio`)
-
-# Rodando a regressão! :)
-rls <- lm(Ocupação ~ `Internet no domicílio`, df_rls)
-summary(rls) # Extraindo os coeficientes
-# stargazer(rls) 
-```
-
-### RLS para Sexo = Homem: 
-
-Aqui, é possível rodar a regressão de duas maneiras distintas:
-
-1.  Separando as amostras por Sexo
-
-2.  Inserindo um termo de interação entre a variável explicativa
-    (Internet no domicílio) e o sexo que se pretende avaliar
-
-```{r}
-# Código para a primeira maneira:
-
-# Selecionando exclusivamente a seção de homens da amostra
-df_rlsh <- df_rls %>% 
-  filter(Sexo == "Homem")
-
-# Covariância para homens
-cov(df_rlsh$Ocupação, df_rlsh$`Internet no domicílio`)
-
-# Rodando a regressão
-rlsh <- lm(Ocupação ~ `Internet no domicílio`, df_rlsh)
-summary(rlsh)
-
-# Código para a segunda maneira:
-df_rlsh2 <- df_rls %>% 
-  mutate(sex = case_when(
-    Sexo == "Homem" ~ 1,
-    Sexo == "Mulher" ~ 0))
-rlsh2 <- lm(Ocupação ~ `Internet no domicílio` + I(`Internet no domicílio` * sex), df_rlsh2) # Aqui, há o termo de interação I(Internet no domicílio * Sexo)
-#summary(rlsh2)
-```
-
-### RLS para Sexo = Mulher: 
-
-```{r}
-# Código para a primeira maneira:
-
-# Selecionando exclusivamente a seção de mulheres da amostra
-df_rlsm <- df_rls %>% 
-  filter(Sexo == "Mulher")
-
-# Covariância para mulheres
-cov(df_rlsm$Ocupação, df_rlsm$`Internet no domicílio`)
-
-# Rodando a regressão
-rlsm <- lm(Ocupação ~ `Internet no domicílio`, df_rlsm)
-summary(rlsm)
-
-# Código para a segunda maneira:
-df_rlsm2 <- df_rls %>% 
-  mutate(sex = as.numeric(Sexo) - 1)
-rlsm2 <- lm(Ocupação ~ `Internet no domicílio` + I(`Internet no domicílio` * sex), df_rlsm2) # Aqui, há o termo de interação I(Internet no domicílio * Sexo)
-#summary(rlsm2)
-```
-
-Agora, vamos usar a função stargazer para combinar os resultados das
-três regressões
-
-```{r}
-stargazer(rls, rlsh, rlsm, 
-          title = "Resultados de Modelos de Regressão",
-          align = TRUE, # alinhar as variáveis
-          dep.var.caption = "Prob(Ocupado = 1)", # rótulo da variável dependente
-          column.labels = c("Modelo 1", "Modelo 2", "Modelo 3"), # rótulos das colunas
-          type = "text") # Usar nada para latex
-```
-
 ## Regressão linear múltipla
 
-1) Preparação dos dados
+1)  Preparação dos dados
 
 -   **Características individuais:** Sexo (V2007), Idade (V2009),
     Cor/Raça (V2010), Região do país (Sudeste ou Nordeste/Norte, Sul e
@@ -334,86 +139,111 @@ stargazer(rls, rlsh, rlsm,
 
 ```{r}
 
+# Função para construir a inversa de %in% para ser usado na formulação da variável Sudeste
+`%!in%` = Negate(`%in%`)
+
+pnadc %>% 
+  count(VD4002)
+
+# Base de dados para as regressões
 df_rlm <- pnadc %>% 
   filter(V2009 > 17 & V2009 < 66) %>%  # Aplicando o filtro de idade 18-65 anos
-  select(VD4002, S01029, V2007, V2009, V2010, UF, VD3004) %>% 
-  mutate(Ocupação = as.numeric(VD4002) - 1,
-         `Internet no domicílio` = if_else(S01029 == "Sim", 1, 0),
-         Sexo = V2007,
+  select(UF, VD4002, S01029, V2007, V2009, V2010, S01017, V5002A, VD3005, V5004A, V1022) %>%  # Selecionando as variáveis
+  mutate(Ocupação = if_else(VD4002 == "Pessoas ocupadas", 1, 0), # Tratando as variáveis
+         Internet = if_else(S01029 == "Sim", 1, 0),
+         Mulher = as.numeric(V2007) - 1,
          Idade = V2009,
-         `Branca ou amarela` = if_else(V2010 == "Branca", 1, 
-                                    if_else(V2010 == "Amarela", 1, 0)),
-         `Ensino superior` = if_else(VD3004 == "Superior completo", 1, 0)) %>%
-  select(Ocupação, `Internet no domicílio`, Sexo, Idade, `Branca ou amarela`, `Ensino superior`)
-
+         Branca = if_else(V2010 == "Branca", 1, 0),
+         Sudeste = case_when(UF %in% c("São Paulo", "Espírito Santo", "Rio de Janeiro", "Minas gerais") ~ 1,
+                             UF %!in% c("São Paulo", "Espírito Santo", "Rio de Janeiro", "Minas gerais") ~ 0),
+         Urbana = as.numeric(V1022) - 1,
+         Escolaridade = as.numeric(VD3005) - 1,
+         Aposentado = if_else(V5004A == "Sim", 1, 0),
+         `Bolsa Família` = if_else(V5002A == "Sim", 1, 0)) %>% 
+  select(-c(UF, VD4002, S01029, V2007, V2009, V2010, S01017, V5002A, VD3005, V1022, V5004A))
 ```
 
-2) Tratamento dos NAs da base de dados
+2)  Tratamento dos NAs da base de dados
 
 ```{r}
-# Visualizando a quantidade de NAs
+# Visualizando a proporção de NAs
 df_rlm %>% 
     gg_miss_var(show_pct = TRUE)
 
-# Apenas a variável ocupação possui valores ausentes e esses correspondem às pessoas fora da força de trabalho, portanto, vamos tratá-los como pessoas desocupadas, como para a RLS
-df_rlm <- df_rlm %>%
-  mutate(Ocupação = if_else(is.na(Ocupação), 0, Ocupação))
+# Apenas a variável ocupação possui valores ausentes e esses correspondem às pessoas fora da força de trabalho, portanto, vamos tratá-los como pessoas desocupadas
+# df_rlm <- df_rlm %>%
+#   mutate(Ocupação = if_else(is.na(Ocupação), 0, Ocupação))
 ```
 
-### Modelo geral da regressão: 
+```{r}
 
-### Ocupação = beta_0 + beta_1\*Internet no domicílio + beta_2\*Idade + beta_3\*Ensino superior + beta_4\*Branca ou Amarela + u
+
+df_rlm %>% 
+  filter(!is.na(Ocupação)) %>%  
+  summarise(Proporcao = sum(Ocupação) / (nrow(df_rlm) - 74503), Total = nrow(df_rlm) - 74503)
+
+df_rlm %>% 
+  mutate(Ocupação = if_else(is.na(Ocupação), 0, Ocupação)) %>% 
+  summarise(Proporcao = sum(Ocupação) / nrow(df_rlm), Total = nrow(df_rlm))
+
+
+df_rlm %>% 
+  filter(is.na(Ocupação))
+
+
+# Com NA
+prop_ocupacao_tot_NA <- df_rlm %>%
+  mutate(Total = if_else(Mulher == 1, '', '')) %>% 
+  ggplot(aes(x = Total, fill = Ocupação)) +
+  theme_classic() +
+  geom_bar(position = 'fill') +
+  labs(y = 'Proporção', title = 'Proporção de pessoas ocupadas na amostra') 
+prop_ocupacao_tot_NA
+
+```
+
+### Modelo geral da regressão:
+
+### Ocupação = beta_0 + beta_1\*Internet + beta_2\*Mulher+ beta_3\*Branca+ beta_4\*Alfabetizado + beta_5\*Casa própria + beta_6\*Bolsa Família + u
 
 ```{r}
+# Aferindo a correlação entre as variáveis
+df_rlm %>%
+  cor()
+
 # Rodando a regressão :)
-rlm <- lm(Ocupação ~ `Internet no domicílio` + Idade + `Ensino superior` + `Branca ou amarela`, df_rlm)
+rlm <- lm(Ocupação ~ Internet + Mulher + Branca + Idade + Sudeste + Urbana + Escolaridade + Aposentado + `Bolsa Família`, data = df_rlm)
 summary(rlm)
 ```
 
 ### RLM para Sexo = Homem:
 
 ```{r}
-# Código para a primeira maneira:
-
 # Selecionando exclusivamente a seção de homens da amostra
 df_rlmh <- df_rlm %>% 
-  filter(Sexo == "Homem")
+  filter(Mulher == 0)
 
 # Covariância para homens
-cov(df_rlmh$Ocupação, df_rlmh$`Internet no domicílio`)
+cov(df_rlmh$Ocupação, df_rlmh$Internet)
 
 # Rodando a regressão
-rlmh <- lm(Ocupação ~ `Internet no domicílio` + Idade + `Ensino superior` + `Branca ou amarela`, df_rlmh)
+rlmh <- lm(Ocupação ~ Internet + Idade + Branca + Sudeste + Urbana + Escolaridade + Aposentado + `Bolsa Família`, df_rlmh)
 summary(rlmh)
-
-# Código para a segunda maneira:
-df_rlmh2 <- df_rlm %>%
-  mutate(sex = as.numeric(Sexo) - 1)
-rlmh2 <- lm(Ocupação ~ `Internet no domicílio` + I(`Internet no domicílio` * sex) + Idade + `Ensino superior` + `Branca ou amarela`, df_rlmh2) # Aqui, há o termo de interação I(Internet no domicílio * Sexo)
 ```
 
-### RLM para Sexo  = Mulher:
+### RLM para Sexo = Mulher:
 
 ```{r}
-# Código para a primeira maneira:
-
 # Selecionando exclusivamente a seção de mulheres da amostra
 df_rlmm = df_rlm %>%
-  filter(Sexo == "Mulher")
+  filter(Mulher == 1)
 
 # Covariância para mulheres
-cov(df_rlmm$Ocupação, df_rlmm$`Internet no domicílio`)
+cov(df_rlmm$Ocupação, df_rlmm$Internet)
 
 # Rodando a regressão
-rlmm <- lm(Ocupação ~ `Internet no domicílio` + Idade + `Ensino superior` + `Branca ou amarela`, df_rlmm)
+rlmm <- lm(Ocupação ~ Internet + Idade + Branca + Sudeste + Urbana + Escolaridade + Aposentado + `Bolsa Família`, df_rlmm)
 summary(rlmm)
-
-# Código para a segunda maneira:
-df_rlmm2 <- df_rlm %>% 
-  mutate(sex = case_when(
-    Sexo == "Homem" ~ 1,
-    Sexo == "Mulher" ~ 0))
-rlmm2 <- lm(Ocupação ~ `Internet no domicílio` + I(`Internet no domicílio` * sex) + Idade + `Ensino superior` + `Branca ou amarela`, df_rlmm2) # Aqui, há o termo de interação I(Internet no domicílio * Sexo)
 ```
 
 Agora, vamos usar o stargazer para combinar os resultados dos três
@@ -421,66 +251,10 @@ modelos:
 
 ```{r}
 stargazer(rlm, rlmh, rlmm, 
-          title = "Resultados do modelo de regressão linear múltipla",
+          title = "Resultados dos Modelos de Regressão Linear Múltipla",
           align = TRUE, # alinhar as variáveis
           dep.var.caption = "Prob(Ocupado = 1)", # rótulo da variável dependente
-          column.labels = c("Modelo Geral", "Modelo Homens", "Modelo Mulheres"), # rótulos das colunas
-          type = "text") # Usar nada para latex
-```
-
-# RASCUNHO
-
-```{r}
-# 
-#   mutate(Ocupação = as.numeric(VD4002) - 1,
-#          `Internet no domicilio` = as.numeric(S01029) - 1)
-# 
-# # Selecionando as variáveis
-# var_rls <- pnadc %>% 
-#   filter(V2009 > 17 & V2009 < 66) %>% 
-#   select(V2007, VD4002, S01029) # Sexo, ocupação e internet
-# var_rls$VD4002 <- factor(var_rls$VD4002, exclude = NULL)
-# var_rls$S01029 <- factor(var_rls$S01029, exclude = NULL)
-# 
-# summary(lm(VD4002 ~ S01029, var_rls))
-```
-
-```{r}
-#NAS
-# Geral:
-# df_rls %>% 
-#   select(Ocupação, `Internet no domicílio`) %>% 
-#   gg_miss_var(show_pct = TRUE)
-# 
-# # Por sexo:
-# df_rls %>% 
-#   select(Sexo, Ocupação, `Internet no domicílio`) %>% 
-#   gg_miss_var(show_pct = TRUE, facet = Sexo)
-```
-
-```{r}
-
-# Selecionando a variável para homens
-#var_rlsm <- var_rls %>% 
-#  filter(V2007 == "Mulher")
-
-# Covariância para mulheres
-#var_rlsm_sna <- var_rlsm %>% 
-#  drop_na()
-#cov(var_rlsm_sna$VD4002, var_rlsm_sna$S01029)
-
-# Regressão linear simples para mulheres
-#rlsm <- lm(VD4002 ~ S01029, var_rlsm)
-#summary(rlsm)
-
-# Exportando os resultados usando o stargazer
-#stargazer(rlsm)
-```
-
-```{r}
-#var_rlm$VD4002 <- factor(var_rlm$VD4002, levels = c("Pessoas ocupadas", "Pessoas desocupadas"))
-#var_rlm$S01029 <- factor(var_rlm$S01029, levels = c("Sim", "Não"))
-#var_rlm$V2007 <- factor(var_rlm$V2007, levels = c("Mulher", "Homem"))
-#var_rlm$V2010 <- factor(var_rlm$V2010, levels = c("Branca", "Preta", "Parda", "Amarela", "Indígena", "Ignorada"))
-#var_rlm$VD3004 <- factor(var_rlm$VD4002, levels = c("Sem instrução e menos de 1 ano de estudo", "Fundamental incompleto ou equivalente", "Fundamental completo ou equivalente", "Médio incompleto ou equivalente", "Médio completo ou equivalente", "Superior incompleto ou equivalente", "Superior completo"))
+          column.labels = c("Geral", "Homens", "Mulheres"), # rótulos das colunas
+          omit.stat = c("ser", "f")) # Retirar coeficientes de standard error e estatística F
+          # type = "text") # Usar nada para latex
 ```
